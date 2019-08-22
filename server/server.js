@@ -2,7 +2,7 @@
 
 var loopback = require('loopback');
 var boot = require('loopback-boot');
-//const axios = require('axios');
+const axios = require('axios');
 
 require('dotenv').config()
 

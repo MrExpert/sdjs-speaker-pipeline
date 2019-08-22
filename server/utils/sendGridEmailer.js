@@ -185,26 +185,22 @@ function sendEmailToNewAdmin(username, email) {
 }
 
 ontime({ // this function takes object and a function
-    cycle: ['8:00:00']
+    cycle: ['10']
 }, function (ot) { 
-    console.log('ontime works every 1 minute');
     //this function takes 'ot' as an argument
     getTalkDetails()   // calls this function -  gets values: { Talk, Speaker, Event } = app.models; from loopback
         .then(res => {   // once it gets - Talk, Speaker, Event - as response
             let date = new Date();  // Date() - gives us current date
-            let threeDaysFromNow = moment(date).add(6, 'day').format('YYYY-MM-DD'); // specific date is picked for trigger the event.
-            res = res.filter(talk => talk.currentStatus === 'Approve' && moment(talk.eventDate).add(1, 'day').format('YYYY-MM-DD') === threeDaysFromNow)
-            console.log('res: ',res.length);
+            let sevenDaysFromNow = moment(date).add(6, 'day').format('YYYY-MM-DD'); // specific date is picked for trigger the event.
+            let oneDayFromNow = moment(date).add(1, 'day').format('YYYY-MM-DD'); // specific date is picked for trigger the event.
+            res = res.filter(talk => talk.currentStatus === 'Approve' && (moment(talk.eventDate).add(1, 'day').format('YYYY-MM-DD') === sevenDaysFromNow || moment(talk.eventDate).add(1, 'day').format('YYYY-MM-DD') === oneDayFromNow ))
             if (
                 res.length !== 0) {
                 axios.post('http://localhost:3000/api/organizers/login', { username: process.env.ADMIN_USERNAME, password: process.env.ADMIN_PASSWORD, ttl: 60 * 5 })
                     .then(response => {
-                        console.log('this is ID: ',response.data.id)
                         return response.data.id
                     }).then(accessToken => {
-                        console.log('this is Access Token: ',accessToken);
                         res.forEach(speaker => {
-                            console.log('this is speaker: ',speaker);
                             return new Promise((resolve, reject) => {
                                 if (accessToken == undefined) {
                                     reject({ message: 'Bad accessToken in reminder email' });
@@ -233,7 +229,7 @@ ontime({ // this function takes object and a function
 
                                 axios({
                                     method: 'post',
-                                    url: `http://localhost:3000/api/accessTokens`,
+                                    url: 'http://localhost:3000/api/accessTokens',
                                     headers: {
                                         Authorization: accessToken
                                     },
@@ -242,10 +238,8 @@ ontime({ // this function takes object and a function
                                         ttl: 60 * 60 * 24 * 3
                                     }
                                 }).then(response => {
-                                    console.log('this is reponse.data.id : ', response.data.id);
                                     return response.data.id
                                 }).then(speakerToken => {
-                                    console.log(speakerToken);
                                     let emailContent = `SDJS would like to remind you that you have
                                                         been approved to speeak at ${speaker.eventName} on ${speaker.eventDate.toDateString()}.
                                                         Please click this button to visit out site to confirm or cancel your talk. `
@@ -259,7 +253,7 @@ ontime({ // this function takes object and a function
                                         dynamic_template_data: {
                                             emailContent: emailContent,
                                             sdjsBtn: true,
-                                            url: (`${url} + ${speakerToken} + '&eventId=' + ${speaker.talkId}`),
+                                            url: (url + speakerToken + '&eventId=' + speaker.talkId),
                                             title: 'SDJS Meetup Speaker Reminder'
                                         }
                                     }
