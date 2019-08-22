@@ -5,6 +5,7 @@ export const changeTalkStatus = (talkId, selectedStatus, speakerToken) => {
         type: 'SUBMIT_STATUS',
         payload: axios.get('api/robotLogin')
             .then(accessToken => {
+                console.log('this is robotLogin accesstoken: ',accessToken.data.id)
                 axios({
                     method: 'put',
                     url: 'api/talks/changeTalkStatus',
@@ -19,7 +20,7 @@ export const changeTalkStatus = (talkId, selectedStatus, speakerToken) => {
                         axios({
                             method: 'delete',
                             url: (`api/accessTokens/${speakerToken}`),
-                            headers: { 
+                            headers: {
                                 Authorization: accessToken.data.id
                             },
                             data: {

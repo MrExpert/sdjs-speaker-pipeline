@@ -23,17 +23,18 @@ app.start = function() {
  });
 };
 
-// app.get('/api/robotLogin', (req, res) => {
-//   axios({
-//     method: 'post',
-//     url: 'http://localhost:3000/api/organizers/login',
-//     data: {
-//       username: process.env.ADMIN_USERNAME,
-//       password: process.env.ADMIN_PASSWORD,
-//       ttl: 60 * 1
-//     }
-//   }).then(response => res.send(response.data));
-// });
+app.get('/api/robotLogin', (req, res) => {
+  axios({
+    method: 'post',
+    url: 'http://localhost:3000/api/organizers/login',
+    data: {
+      username: process.env.ADMIN_USERNAME,
+      password: process.env.ADMIN_PASSWORD,
+      ttl: 60 * 1
+    }
+  }).then(response => res.send(response.data))
+  .catch((err)=>{ reject('this is an error :', err)});
+});
 
 // Bootstrap the application, configure models, datasources and middleware.
 // Sub-apps like REST API are mounted via boot scripts.

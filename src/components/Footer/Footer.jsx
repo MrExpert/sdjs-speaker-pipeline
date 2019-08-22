@@ -22,9 +22,7 @@ const footer = props => {
             <div className='bottom-link'>
 
                   <p className='webflow'>
-                    Site created with and sponsored by <a href='https://webflow.com' className={location.pathname === '/Admin/Login' ? 'nav-item w--current' : 'nav-item'}>
-                        Webflow
-                    </a>
+                San Diego JS 
                 </p>
             </div>
         </div>

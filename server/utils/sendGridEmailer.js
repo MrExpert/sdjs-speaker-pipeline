@@ -42,7 +42,9 @@ function sendEmailToSpeaker(adminEmail, approved, pending, speakerEmail, speaker
             dynamic_template_data: {
                 emailContent: emailContent,
                 sdjsBtn: false,
-                title: 'SDJS Meetup Speaker Request'
+                title: 'SDJS Meetup Speaker Request',
+                url: 'http://sandiegojs.org',
+                
             }
         }
         sgMail.send(email)
@@ -182,95 +184,102 @@ function sendEmailToNewAdmin(username, email) {
     })
 }
 
-// ontime({
-//     cycle: '8:00:00'
-// }, function (ot) {
+ontime({ // this function takes object and a function
+    cycle: ['8:00:00']
+}, function (ot) { 
+    console.log('ontime works every 1 minute');
+    //this function takes 'ot' as an argument
+    getTalkDetails()   // calls this function -  gets values: { Talk, Speaker, Event } = app.models; from loopback
+        .then(res => {   // once it gets - Talk, Speaker, Event - as response
+            let date = new Date();  // Date() - gives us current date
+            let threeDaysFromNow = moment(date).add(6, 'day').format('YYYY-MM-DD'); // specific date is picked for trigger the event.
+            res = res.filter(talk => talk.currentStatus === 'Approve' && moment(talk.eventDate).add(1, 'day').format('YYYY-MM-DD') === threeDaysFromNow)
+            console.log('res: ',res.length);
+            if (
+                res.length !== 0) {
+                axios.post('http://localhost:3000/api/organizers/login', { username: process.env.ADMIN_USERNAME, password: process.env.ADMIN_PASSWORD, ttl: 60 * 5 })
+                    .then(response => {
+                        console.log('this is ID: ',response.data.id)
+                        return response.data.id
+                    }).then(accessToken => {
+                        console.log('this is Access Token: ',accessToken);
+                        res.forEach(speaker => {
+                            console.log('this is speaker: ',speaker);
+                            return new Promise((resolve, reject) => {
+                                if (accessToken == undefined) {
+                                    reject({ message: 'Bad accessToken in reminder email' });
+                                    return false;
+                                }
 
-//     getTalkDetails()
-//         .then(res => {
-//             let date = new Date();
-//             let threeDaysFromNow = moment(date).add(3, 'day').format('YYYY-MM-DD');
-//             res = res.filter(talk => talk.currentStatus === 'Approve' && moment(talk.eventDate).add(1, 'day').format('YYYY-MM-DD') === threeDaysFromNow)
-//             if (
-//                 res.length !== 0) {
-//                 axios.post('http://localhost:3000/api/organizers/login', { username: process.env.ADMIN_USERNAME, password: process.env.ADMIN_PASSWORD, ttl: 60 * 5 })
-//                     .then(response => {
-//                         return response.data.id
-//                     }).then(accessToken => {
-//                         res.forEach(speaker => {
-//                             return new Promise((resolve, reject) => {
-//                                 if (accessToken == undefined) {
-//                                     reject({ message: 'Bad accessToken in reminder email' });
-//                                     return false;
-//                                 }
+                                if ( speaker.speakerEmail == undefined) {
+                                    reject({ message: 'Bad Speaker Email in reminder email' });
+                                    return false;
+                                }
 
-//                                 if ( speaker.speakerEmail == undefined) {
-//                                     reject({ message: 'Bad Speaker Email in reminder email' });
-//                                     return false;
-//                                 }
+                                if ( speaker.eventName == undefined) {
+                                    reject({ message: 'Bad event name in reminder email' });
+                                    return false;
+                                }
 
-//                                 if ( speaker.eventName == undefined) {
-//                                     reject({ message: 'Bad event name in reminder email' });
-//                                     return false;
-//                                 }
+                                if ( speaker.eventDate == undefined) {
+                                    reject({ message: 'Bad Meetup Date in reminder email' });
+                                    return false;
+                                }
 
-//                                 if ( speaker.eventDate == undefined) {
-//                                     reject({ message: 'Bad Meetup Date in reminder email' });
-//                                     return false;
-//                                 }
+                                if (speaker.talkId == undefined) {
+                                    reject({ message: 'Bad talkId in reminder email' });
+                                    return false;
+                                }
 
-//                                 if (speaker.talkId == undefined) {
-//                                     reject({ message: 'Bad talkId in reminder email' });
-//                                     return false;
-//                                 }
+                                axios({
+                                    method: 'post',
+                                    url: `http://localhost:3000/api/accessTokens`,
+                                    headers: {
+                                        Authorization: accessToken
+                                    },
+                                    data: {
+                                        id: speaker.talkId,
+                                        ttl: 60 * 60 * 24 * 3
+                                    }
+                                }).then(response => {
+                                    console.log('this is reponse.data.id : ', response.data.id);
+                                    return response.data.id
+                                }).then(speakerToken => {
+                                    console.log(speakerToken);
+                                    let emailContent = `SDJS would like to remind you that you have
+                                                        been approved to speeak at ${speaker.eventName} on ${speaker.eventDate.toDateString()}.
+                                                        Please click this button to visit out site to confirm or cancel your talk. `
 
-//                                 axios({
-//                                     method: 'post',
-//                                     url: `http://localhost:3000/api/accessTokens`,
-//                                     headers: {
-//                                         Authorization: accessToken
-//                                     },
-//                                     data: {
-//                                         id: speaker.TalkId,
-//                                         ttl: 60 * 60 * 24 * 3
-//                                     }
-//                                 }).then(response => {
-//                                     return response.data.id
-//                                 }).then(speakerToken => {
-//                                     let emailContent = `SDJS would like to remind you that you have
-//                                                         been approved to speeak at ${speaker.eventName} on ${speaker.eventDate.toDateString()}.
-//                                                         Please click this button to visit out site to confirm or cancel your talk. `
+                                    const url = 'http://localhost:3000/#/ConfirmOrCancel/?t=';
+                                    const reminder = {
+                                        to: speaker.speakerEmail,
+                                        from: process.env.ADMIN_EMAIL,
+                                        subject: 'SDJS Meetup Speaker Reminder',
+                                        templateId: process.env.ADMIN_SPEAKER_EMAIL_TEMPLATE,
+                                        dynamic_template_data: {
+                                            emailContent: emailContent,
+                                            sdjsBtn: true,
+                                            url: (`${url} + ${speakerToken} + '&eventId=' + ${speaker.talkId}`),
+                                            title: 'SDJS Meetup Speaker Reminder'
+                                        }
+                                    }
+                                    sgMail.send(reminder)
+                                        .then(() => {
+                                            resolve({ reminder })
+                                        })
+                                        .catch(err => {
+                                            console.log(err);
+                                            reject(err);
+                                        })
+                                })
+                            })
+                        })
+                    })
+            }
+        })
 
-//                                     const url = 'http://localhost:3000/#/ConfirmOrCancel/?t=';
-//                                     const reminder = {
-//                                         to: speaker.speakerEmail,
-//                                         from: process.env.ADMIN_EMAIL,
-//                                         subject: 'SDJS Meetup Speaker Reminder',
-//                                         templateId: process.env.SPEAKER_REMINDER_EMAIL_TEMPLATE,
-//                                         dynamic_template_data: {
-//                                             emailContent: emailContent,
-//                                             sdjsBtn: true,
-//                                             url: (url + speakerToken + '&eventId=' + speaker.talkId),
-//                                             title: 'SDJS Meetup Speaker Reminder'
-//                                         }
-//                                     }
-//                                     sgMail.send(reminder)
-//                                         .then(() => {
-//                                             resolve({ reminder })
-//                                         })
-//                                         .catch(err => {
-//                                             console.log(err);
-//                                             reject(err);
-//                                         })
-//                                 })
-//                             })
-//                         })
-//                     })
-//             }
-//         })
-
-//     ot.done()
-//     return
-// })
+    ot.done()
+    return
+})
 
 module.exports = { sendEmailToSpeaker, sendEmailToAdmin, sendEmailToNewAdmin, sendConfirmCancelToAdmin }
