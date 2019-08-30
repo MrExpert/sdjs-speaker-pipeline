@@ -185,7 +185,7 @@ function sendEmailToNewAdmin(username, email) {
 }
 
 ontime({ // this function takes object and a function
-    cycle: ['10']
+    cycle: ['8:00:00']
 }, function (ot) { 
     //this function takes 'ot' as an argument
     getTalkDetails()   // calls this function -  gets values: { Talk, Speaker, Event } = app.models; from loopback
